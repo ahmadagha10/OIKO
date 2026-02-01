@@ -68,6 +68,7 @@ export async function POST(request: NextRequest) {
       firstName: user.firstName,
       lastName: user.lastName,
       phone: user.phone,
+      role: user.role,
       fragmentPoints: user.fragmentPoints,
       addresses: user.addresses,
       createdAt: user.createdAt,

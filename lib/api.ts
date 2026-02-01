@@ -10,6 +10,13 @@ interface ApiResponse<T> {
   error?: string;
   message?: string;
   count?: number;
+  pagination?: {
+    page: number;
+    limit: number;
+    totalPages: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+  };
 }
 
 /**
@@ -21,10 +28,15 @@ async function fetchAPI<T>(
 ): Promise<ApiResponse<T>> {
   try {
     const url = `${API_URL}${endpoint}`;
+
+    // Get token from localStorage for authenticated requests
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+
     const response = await fetch(url, {
       ...options,
       headers: {
         'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...options?.headers,
       },
     });
@@ -33,10 +45,6 @@ async function fetchAPI<T>(
 
     // Don't throw for expected auth failures, just return the error response
     if (!response.ok) {
-      // Only log non-auth errors to avoid console noise
-      if (response.status !== 401) {
-        console.error('API Error:', data.error || data.message);
-      }
       return {
         success: false,
         error: data.error || data.message || 'API request failed',
@@ -45,7 +53,6 @@ async function fetchAPI<T>(
 
     return data;
   } catch (error: any) {
-    console.error('API Error:', error);
     return {
       success: false,
       error: error.message || 'An error occurred',
@@ -244,6 +251,7 @@ export interface User {
   firstName: string;
   lastName: string;
   phone?: string;
+  role: 'customer' | 'admin';
   fragmentPoints: number;
   addresses: {
     street: string;
@@ -578,4 +586,23 @@ export async function getProductAnalytics(query?: AnalyticsQuery): Promise<ApiRe
 
   const queryString = params.toString();
   return fetchAPI<any>(`/api/admin/analytics/products${queryString ? `?${queryString}` : ''}`);
+}
+
+/**
+ * Update order (admin only)
+ */
+export async function updateOrder(orderId: string, updates: Partial<Order>): Promise<ApiResponse<Order>> {
+  return fetchAPI<Order>(`/api/admin/orders/${orderId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(updates),
+  });
+}
+
+/**
+ * Delete user (admin only)
+ */
+export async function deleteUser(userId: string): Promise<ApiResponse<any>> {
+  return fetchAPI<any>(`/api/admin/users/${userId}`, {
+    method: 'DELETE',
+  });
 }
