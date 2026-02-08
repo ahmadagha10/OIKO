@@ -63,7 +63,7 @@ export function Header() {
         <Link href="/" className="flex items-center px-0 md:px-6">
           <div className="flex items-center md:-ml-6">
             <Image
-              src="/images/logo.svg"
+              src="/images/logo.png"
               alt="Oiko Logo"
               width={50}
               height={50}
