@@ -1,36 +1,152 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# OIKO - Premium Custom Streetwear
 
-## Getting Started
+E-commerce platform built with Next.js 16, deployed on Cloudflare Workers.
 
-First, run the development server:
+## Prerequisites
+
+- Node.js 22+
+- npm
+- A [MongoDB Atlas](https://www.mongodb.com/cloud/atlas) database
+- A [Cloudflare](https://cloudflare.com) account (Workers Paid plan for deployment)
+
+## Quick Start
+
+### 1. Clone and install
+
+```bash
+git clone https://github.com/ahmadagha10/OIKO.git
+cd OIKO
+npm install --legacy-peer-deps
+```
+
+### 2. Configure environment
+
+```bash
+cp .env.example .env.local
+```
+
+Edit `.env.local` and fill in your values:
+
+| Variable | Required | Description |
+|---|---|---|
+| `MONGODB_URI` | Yes | MongoDB Atlas connection string |
+| `JWT_SECRET` | Yes | Secret key for JWT signing (generate with `openssl rand -base64 48`) |
+| `NEXT_PUBLIC_API_URL` | Yes | `http://localhost:3000` for dev, your domain for production |
+| `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` | No | Cloudinary cloud name for image uploads |
+| `CLOUDINARY_CLOUD_NAME` | No | Same as above (server-side) |
+| `CLOUDINARY_API_KEY` | No | Cloudinary API key |
+| `CLOUDINARY_API_SECRET` | No | Cloudinary API secret |
+| `RESEND_API_KEY` | No | [Resend](https://resend.com) API key for emails |
+| `EMAIL_FROM` | No | Sender email address |
+
+### 3. Seed the database
+
+```bash
+npm run seed
+```
+
+### 4. Run development server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Command | Description |
+|---|---|
+| `npm run dev` | Start dev server (port 3000) |
+| `npm run build` | Production build |
+| `npm start` | Run production server |
+| `npm run lint` | Run ESLint |
+| `npm run seed` | Seed MongoDB with product data |
+| `npm run preview` | Build for Cloudflare and test locally (port 8787) |
+| `npm run deploy` | Build and deploy to Cloudflare Workers |
+| `npm run cf-build` | Build for Cloudflare without deploying |
 
-## Learn More
+## Deployment to Cloudflare Workers
 
-To learn more about Next.js, take a look at the following resources:
+### First-time setup
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. **Install Wrangler and log in:**
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+npx wrangler login
+```
 
-## Deploy on Vercel
+2. **Set production secrets:**
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+wrangler secret put MONGODB_URI
+wrangler secret put JWT_SECRET
+wrangler secret put EMAIL_FROM
+wrangler secret put RESEND_API_KEY
+wrangler secret put CLOUDINARY_CLOUD_NAME
+wrangler secret put CLOUDINARY_API_KEY
+wrangler secret put CLOUDINARY_API_SECRET
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Each command prompts you to paste the value.
+
+3. **Create `.env.production`** for build-time variables:
+
+```bash
+NEXT_PUBLIC_API_URL=https://your-domain.com
+NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=your-cloud-name
+```
+
+4. **Deploy:**
+
+```bash
+npm run deploy
+```
+
+### Custom domain
+
+Edit `wrangler.toml` to set your domain:
+
+```toml
+routes = [
+  { pattern = "yourdomain.com", custom_domain = true },
+  { pattern = "www.yourdomain.com", custom_domain = true },
+]
+```
+
+The domain must be added to your Cloudflare account with DNS managed by Cloudflare.
+
+### CI/CD with GitHub Actions
+
+The repo includes a GitHub Actions workflow (`.github/workflows/deploy.yml`) that auto-deploys on push to `main`.
+
+Add these secrets to your GitHub repo (`Settings > Secrets > Actions`):
+
+| Secret | Value |
+|---|---|
+| `CLOUDFLARE_API_TOKEN` | Create at [Cloudflare API Tokens](https://dash.cloudflare.com/profile/api-tokens) using the "Edit Cloudflare Workers" template |
+| `CLOUDFLARE_ACCOUNT_ID` | Found in Cloudflare dashboard sidebar |
+| `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` | Your Cloudinary cloud name |
+
+### Local preview (Miniflare)
+
+Test the Cloudflare build locally before deploying:
+
+```bash
+npm run preview
+```
+
+This builds the app with `@opennextjs/cloudflare` and runs it locally via Miniflare at http://localhost:8787.
+
+## Architecture
+
+- **Framework:** Next.js 16 (App Router)
+- **Runtime:** Cloudflare Workers via `@opennextjs/cloudflare`
+- **Database:** MongoDB Atlas (Mongoose ODM)
+- **Auth:** JWT with bcryptjs
+- **Styling:** Tailwind CSS 4 + shadcn/ui
+- **Animations:** Framer Motion
+- **File Uploads:** Cloudinary
+- **Email:** Resend
+
+See `CLAUDE.md` for detailed architecture documentation.
