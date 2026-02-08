@@ -18,10 +18,10 @@ async function testStandardConnection() {
 
     await mongoose.connect(standardUri, options);
     console.log('✅ MongoDB connection successful!');
-    console.log('📊 Database:', mongoose.connection.db.databaseName);
+    console.log('📊 Database:', mongoose.connection.db?.databaseName);
 
     // List collections
-    const collections = await mongoose.connection.db.listCollections().toArray();
+    const collections = await mongoose.connection.db!.listCollections().toArray();
     console.log('📁 Collections:', collections.map(c => c.name).join(', ') || 'None');
 
     await mongoose.connection.close();

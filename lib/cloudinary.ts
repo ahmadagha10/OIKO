@@ -22,7 +22,7 @@ export async function uploadImage(
   options?: {
     public_id?: string;
     overwrite?: boolean;
-    resource_type?: string;
+    resource_type?: 'raw' | 'auto' | 'image' | 'video';
   }
 ): Promise<{
   success: boolean;

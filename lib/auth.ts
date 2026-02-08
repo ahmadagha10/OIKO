@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
 import { NextRequest } from 'next/server';
 import User, { IUser } from '@/models/User';
 import connectDB from './mongodb';
@@ -142,7 +143,6 @@ export async function requireAdmin(request: NextRequest): Promise<IUser | Respon
  * Hash password helper (for consistency)
  */
 export async function hashPassword(password: string): Promise<string> {
-  const bcrypt = require('bcryptjs');
   const salt = await bcrypt.genSalt(10);
   return bcrypt.hash(password, salt);
 }
@@ -154,6 +154,5 @@ export async function comparePassword(
   candidatePassword: string,
   hashedPassword: string
 ): Promise<boolean> {
-  const bcrypt = require('bcryptjs');
   return bcrypt.compare(candidatePassword, hashedPassword);
 }

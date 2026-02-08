@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
         {
           success: false,
           error: 'Validation failed',
-          errors: validation.error.errors,
+          errors: validation.error.issues,
         },
         { status: 400 }
       );

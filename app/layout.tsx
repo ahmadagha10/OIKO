@@ -2,7 +2,6 @@ import type React from "react";
 import type { Metadata } from "next";
 import { Ubuntu } from "next/font/google";
 import "./globals.css";
-import { Analytics } from "@vercel/analytics/react";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { Providers } from "@/components/providers";
@@ -91,11 +90,9 @@ export default function RootLayout({
       <body className={`font-sans antialiased ${ubuntu.variable}`}>
         <Providers>
           <WelcomeWrapper showOnce={true}>
-            {/* Header This file render the root app before loading the main pages.*/}
             <Header />
             {children}
             <Footer />
-            <Analytics />
           </WelcomeWrapper>
         </Providers>
       </body>

@@ -1,0 +1,14 @@
+#:schema node_modules/wrangler/config-schema.json
+name = "oiko"
+main = ".open-next/worker.js"
+compatibility_date = "2025-09-08"
+compatibility_flags = ["nodejs_compat"]
+
+routes = [
+  { pattern = "oikaofit.com", custom_domain = true },
+  { pattern = "www.oikaofit.com", custom_domain = true },
+]
+
+[assets]
+directory = ".open-next/assets"
+binding = "ASSETS"
