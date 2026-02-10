@@ -1,157 +1,106 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '@/lib/mongodb';
+import { connectDB } from '@/lib/mongodb';
 import TrialRequest from '@/models/TrialRequest';
-import User from '@/models/User';
 import { requireAuth } from '@/lib/auth';
-import { IUser } from '@/models/User';
+import { sendEmail } from '@/lib/email';
+import type { IUser } from '@/models/User';
 
-// POST /api/trial-requests - Create trial request
+// POST /api/trial-requests - Create a trial request
 export async function POST(request: NextRequest) {
   try {
-    // Check authentication
     const authResult = await requireAuth(request);
-    if (authResult instanceof Response) {
-      return authResult;
-    }
+    if (authResult instanceof Response) return authResult;
     const user = authResult as IUser;
+
+    const body = await request.json();
+
+    if (!body.productType || !body.size || !body.color || !body.address) {
+      return NextResponse.json(
+        { success: false, error: 'Missing required fields' },
+        { status: 400 }
+      );
+    }
+
+    const { address } = body;
+    if (!address.street || !address.city || !address.phone) {
+      return NextResponse.json(
+        { success: false, error: 'Incomplete address information' },
+        { status: 400 }
+      );
+    }
+
+    if (address.city.toLowerCase() !== 'riyadh') {
+      return NextResponse.json(
+        { success: false, error: 'Trial program is currently only available in Riyadh' },
+        { status: 400 }
+      );
+    }
 
     await connectDB();
 
-    const body = await request.json();
-    const { productType, size } = body;
-
-    // Validate required fields
-    if (!productType || !size) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Product type and size are required',
-        },
-        { status: 400 }
-      );
-    }
-
-    // Get user details
-    const currentUser = await User.findById(user._id);
-    if (!currentUser) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'User not found',
-        },
-        { status: 404 }
-      );
-    }
-
-    // Get default address
-    const defaultAddress = currentUser.addresses.find((addr: any) => addr.isDefault) || currentUser.addresses[0];
-
-    if (!defaultAddress) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Please add an address to your profile first',
-        },
-        { status: 400 }
-      );
-    }
-
-    // Check if city is Riyadh
-    if (!defaultAddress.city.toLowerCase().includes('riyadh')) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Try Before You Buy is only available in Riyadh',
-        },
-        { status: 400 }
-      );
-    }
-
-    // Check if user has any pending trial requests
-    const pendingRequest = await TrialRequest.findOne({
+    const existingRequest = await TrialRequest.findOne({
       userId: user._id,
-      status: { $in: ['pending', 'approved', 'delivered'] },
+      status: 'pending',
     });
 
-    if (pendingRequest) {
+    if (existingRequest) {
       return NextResponse.json(
-        {
-          success: false,
-          error: 'You already have an active trial request. Please return it before requesting another.',
-        },
+        { success: false, error: 'You already have a pending trial request' },
         { status: 400 }
       );
     }
 
-    // Create trial request
     const trialRequest = await TrialRequest.create({
       userId: user._id,
-      customerInfo: {
-        email: currentUser.email,
-        firstName: currentUser.firstName,
-        lastName: currentUser.lastName,
-        phone: currentUser.phone,
-        street: defaultAddress.street,
-        city: defaultAddress.city,
-        zipCode: defaultAddress.zipCode,
-        country: defaultAddress.country,
+      productType: body.productType,
+      size: body.size,
+      color: body.color,
+      address: {
+        street: address.street,
+        city: address.city,
+        state: address.state || '',
+        zipCode: address.zipCode || '',
+        country: address.country || 'Saudi Arabia',
+        phone: address.phone,
       },
-      productType,
-      size,
       status: 'pending',
-      agreedToTerms: true,
+      notes: body.notes || '',
     });
 
+    sendEmail({
+      to: user.email,
+      subject: 'Trial Request Received - OIKO',
+      html: `<h1>Trial request received for ${body.productType}</h1>`,
+    }).catch(console.error);
+
     return NextResponse.json(
-      {
-        success: true,
-        data: trialRequest,
-        message: 'Trial request submitted successfully! We will contact you within 24 hours.',
-      },
+      { success: true, message: 'Trial request submitted successfully', data: trialRequest },
       { status: 201 }
     );
   } catch (error: any) {
     console.error('Error creating trial request:', error);
     return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to create trial request',
-        message: error.message,
-      },
+      { success: false, error: 'Failed to create trial request' },
       { status: 500 }
     );
   }
 }
 
-// GET /api/trial-requests - Get user's trial requests
+// GET /api/trial-requests
 export async function GET(request: NextRequest) {
   try {
-    // Check authentication
     const authResult = await requireAuth(request);
-    if (authResult instanceof Response) {
-      return authResult;
-    }
+    if (authResult instanceof Response) return authResult;
     const user = authResult as IUser;
 
     await connectDB();
+    const requests = await TrialRequest.find({ userId: user._id }).sort({ createdAt: -1 }).lean();
 
-    const trialRequests = await TrialRequest.find({ userId: user._id })
-      .sort({ createdAt: -1 })
-      .lean();
-
-    return NextResponse.json({
-      success: true,
-      count: trialRequests.length,
-      data: trialRequests,
-    });
+    return NextResponse.json({ success: true, data: requests });
   } catch (error: any) {
     console.error('Error fetching trial requests:', error);
     return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to fetch trial requests',
-        message: error.message,
-      },
+      { success: false, error: 'Failed to fetch trial requests' },
       { status: 500 }
     );
   }

@@ -282,6 +282,45 @@ function getOrderShippedEmailHTML(ctaUrl: string, orderRef: string, trackingNumb
 }
 
 /**
+ * Generic email sender (for custom HTML emails like password reset)
+ */
+export async function sendEmail({
+  to,
+  subject,
+  html,
+}: {
+  to: string;
+  subject: string;
+  html: string;
+}) {
+  try {
+    // Check if Resend is configured
+    if (!resend || !process.env.RESEND_API_KEY) {
+      console.warn('RESEND_API_KEY not configured. Skipping email.');
+      return { success: false, error: 'Email service not configured' };
+    }
+
+    const { data, error } = await resend.emails.send({
+      from: `${COMPANY_NAME} <${FROM_EMAIL}>`,
+      to: [to],
+      subject,
+      html,
+    });
+
+    if (error) {
+      console.error('Failed to send email:', error);
+      return { success: false, error: error.message };
+    }
+
+    console.log('Email sent successfully:', data?.id);
+    return { success: true, data };
+  } catch (error: any) {
+    console.error('Error sending email:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
  * Generate order delivered email HTML
  */
 function getOrderDeliveredEmailHTML(ctaUrl: string, orderRef: string): string {

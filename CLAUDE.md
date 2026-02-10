@@ -14,6 +14,13 @@ npm start            # Run production server (after build)
 
 # Database
 npm run seed         # Seed MongoDB with product data
+npm run create-test-user # Create a test user account
+npm run test-db      # Test MongoDB connection
+
+# Cloudflare Workers Deployment
+npm run preview      # Build for Cloudflare and test locally (port 8787)
+npm run deploy       # Build and deploy to Cloudflare Workers
+npm run cf-build     # Build for Cloudflare without deploying
 
 # Code Quality
 npm run lint         # Run ESLint across codebase
@@ -23,9 +30,11 @@ npm run lint         # Run ESLint across codebase
 
 ### Tech Stack
 - **Framework**: Next.js 16.1.1 with App Router
+- **Runtime**: Cloudflare Workers via @opennextjs/cloudflare
 - **Language**: TypeScript (strict mode)
 - **Database**: MongoDB Atlas with Mongoose ODM
 - **Authentication**: JWT-based auth with bcrypt password hashing
+- **Payments**: Stripe integration with webhooks
 - **Styling**: Tailwind CSS 4.x with CSS variables
 - **UI Components**: shadcn/ui (New York style) + Radix UI primitives
 - **State Management**: React Context API (no Redux/Zustand)
@@ -114,10 +123,21 @@ The app has a loyalty rewards system based on "fragment points":
 - Points are clamped at MAX_PROGRESS (100)
 
 #### Cart System
-- Cart items stored in localStorage with key `"cart"`
-- Each cart item has: `id` (generated from product.id + size + color), `product`, `size`, `color`, `quantity`
-- Cart context provides: `addToCart`, `removeFromCart`, `updateQuantity`, `clearCart`, `getTotalItems`, `getTotalPrice`
+**Dual Storage Approach:**
+- **localStorage**: Primary storage for guest users and immediate UI state
+  - Cart items stored with key `"cart"`
+  - Each cart item has: `id` (generated from product.id + size + color), `product`, `size`, `color`, `quantity`
+  - Cart context provides: `addToCart`, `removeFromCart`, `updateQuantity`, `clearCart`, `getTotalItems`, `getTotalPrice`
+- **Database**: Optional backend storage for authenticated users
+  - API routes: `GET /api/cart`, `POST /api/cart`, `DELETE /api/cart/[id]`
+  - Stored in User model's `cart` field
+  - Allows cart persistence across devices for logged-in users
 - Fixed shipping cost: $25 (see `app/cart/page.tsx`)
+
+**Wishlist System** follows the same dual storage pattern:
+- localStorage key: `"wishlist"` (array of product IDs)
+- Database: User model's `wishlist` field
+- API routes: `GET /api/wishlist`, `POST /api/wishlist/[productId]`, `DELETE /api/wishlist/[productId]`
 
 #### shadcn/ui Configuration
 - Style variant: "new-york"
@@ -144,11 +164,17 @@ TypeScript paths configured with `@/*` pointing to root:
 
 3. **Environment Variables**: Required variables in `.env.local`:
    - `MONGODB_URI` - MongoDB Atlas connection string
-   - `JWT_SECRET` - Secret key for JWT token signing
+   - `JWT_SECRET` - Secret key for JWT token signing (generate with `openssl rand -base64 48`)
    - `NEXT_PUBLIC_API_URL` - API base URL (http://localhost:3000 for dev)
    - `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` - Cloudinary cloud name for image uploads
-   - `RESEND_API_KEY` - Resend API key for sending emails
-   - `EMAIL_FROM` - Sender email address
+   - `CLOUDINARY_CLOUD_NAME` - Same as above (server-side)
+   - `CLOUDINARY_API_KEY` - Cloudinary API key (optional)
+   - `CLOUDINARY_API_SECRET` - Cloudinary API secret (optional)
+   - `RESEND_API_KEY` - Resend API key for sending emails (optional)
+   - `EMAIL_FROM` - Sender email address (optional)
+   - `STRIPE_SECRET_KEY` - Stripe secret key for payment processing
+   - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` - Stripe publishable key (client-side)
+   - `STRIPE_WEBHOOK_SECRET` - Stripe webhook secret for verifying webhook signatures
 
    See `.env.example` for template.
 
@@ -193,8 +219,10 @@ Components are added to `components/ui/` and use the New York style variant.
 
 ### Working with Cart/Wishlist
 - Always use context hooks: `useCart()`, `useWishlist()`
-- Cart/wishlist automatically persist to localStorage
-- Wait for `isInitialized` before rendering cart-dependent UI to avoid hydration mismatches
+- **localStorage (Primary)**: Cart/wishlist automatically persist to localStorage for all users
+- **Database (Optional)**: For authenticated users, can sync to database via API routes
+- **Important**: Wait for `isInitialized` before rendering cart-dependent UI to avoid hydration mismatches
+- **Dual Storage Pattern**: The app uses localStorage as the source of truth for UI, with optional database sync for logged-in users. When a user logs in, their localStorage cart can be merged with their database cart if needed.
 
 ### Working with Rewards
 - Import functions from `lib/rewards.ts`
@@ -219,6 +247,12 @@ Components are added to `components/ui/` and use the New York style variant.
   2. Backend returns JWT token and user data
   3. Frontend stores token and updates AuthContext
   4. Protected API routes verify token via Authorization header or cookie
+- **Password Reset Flow**:
+  1. User requests password reset via `POST /api/auth/forgot-password` with email
+  2. Backend generates reset token, stores in User model (expires in 1 hour)
+  3. Email sent with reset link containing token
+  4. User clicks link, submits new password via `POST /api/auth/reset-password`
+  5. Backend validates token, updates password, clears reset token
 - **Example Protected API Route**:
   ```typescript
   import { requireAuth } from '@/lib/auth';
@@ -240,6 +274,8 @@ All API routes follow REST conventions and return consistent JSON format:
 - `POST /api/auth/logout` - Logout user (clears cookie)
 - `GET /api/auth/me` - Get current user (protected)
 - `PATCH /api/auth/me` - Update user profile (protected)
+- `POST /api/auth/forgot-password` - Request password reset email
+- `POST /api/auth/reset-password` - Reset password with token
 
 **Products** (`/api/products/*`)
 - `GET /api/products` - List all products (query: category, search, featured)
@@ -272,29 +308,117 @@ All API routes follow REST conventions and return consistent JSON format:
 - `PATCH /api/designs/[id]` - Update design (protected)
 - `DELETE /api/designs/[id]` - Delete design (protected)
 
+**Cart** (`/api/cart/*`)
+- `GET /api/cart` - Get user's cart with product details (protected)
+- `POST /api/cart` - Add item to cart or update quantity (protected)
+- `DELETE /api/cart/[id]` - Remove item from cart (protected)
+
+**Wishlist** (`/api/wishlist/*`)
+- `GET /api/wishlist` - Get user's wishlist with product details (protected)
+- `POST /api/wishlist/[productId]` - Add product to wishlist (protected)
+- `DELETE /api/wishlist/[productId]` - Remove product from wishlist (protected)
+
+**Newsletter** (`/api/newsletter/*`)
+- `POST /api/newsletter/subscribe` - Subscribe to newsletter
+- `POST /api/newsletter/unsubscribe` - Unsubscribe from newsletter
+
+**Trial Requests** (`/api/trial-requests/*`)
+- `POST /api/trial-requests` - Submit a product trial request
+- Admin routes in `/api/admin/trial-requests/*`
+
+**Upload** (`/api/upload/*`)
+- `POST /api/upload/design` - Upload design image to Cloudinary
+- `POST /api/upload/product` - Upload product image to Cloudinary (admin)
+- `DELETE /api/upload/[publicId]` - Delete image from Cloudinary
+
+**Checkout** (`/api/checkout/*`)
+- `POST /api/checkout/create-payment-intent` - Create Stripe payment intent
+- `POST /api/checkout/verify-payment` - Verify payment and create order
+
+**Webhooks** (`/api/webhooks/*`)
+- `POST /api/webhooks/stripe` - Handle Stripe webhook events (payment success, order updates)
+
 **Admin** (`/api/admin/*`) - All require admin authentication
-- `/api/admin/users` - User management
-- `/api/admin/orders` - Order management
-- `/api/admin/products/bulk` - Bulk product operations
-- `/api/admin/analytics/*` - Analytics endpoints
+- `/api/admin/users` - User management (list, update, delete users)
+- `/api/admin/orders` - Order management (list, update order status)
+- `/api/admin/products/bulk` - Bulk product create/update operations
+- `/api/admin/trial-requests` - View and manage product trial requests
+- `/api/admin/analytics/sales` - Sales analytics and revenue data
+- `/api/admin/analytics/products` - Product performance analytics
+- `/api/admin/analytics/customers` - Customer analytics and insights
 
 ### Database Models
 **User Model** (`models/User.ts`)
-- Fields: email, password (hashed), firstName, lastName, phone, role, fragmentPoints, addresses[]
+- Fields: email, password (hashed), firstName, lastName, phone, role, fragmentPoints, addresses[], cart[], wishlist[], resetPasswordToken, resetPasswordExpires
 - Methods: comparePassword()
 - Middleware: Password hashing pre-save
+- Cart/wishlist arrays store product references for logged-in users
 
 **Product Model** (`models/Product.ts`)
 - Fields: name, price, description, image, category, colors[], sizes[], stock, featured
 - Indexed: category, featured
 
 **Order Model** (`models/Order.ts`)
-- Fields: orderRef (unique), customerInfo, items[], subtotal, shipping, total, pointsEarned, status, paymentStatus, userId
+- Fields: orderRef (unique), customerInfo, items[], subtotal, shipping, total, pointsEarned, status, paymentStatus, userId, stripePaymentIntentId
 - Statuses: pending, processing, shipped, delivered, cancelled
+- Payment statuses: pending, paid, failed, refunded
 
 **Design Model** (`models/Design.ts`)
 - Fields: userId, productType, designData, previewImage, status
 - Used for saving custom designs from `/customize` page
+
+**Subscriber Model** (`models/Subscriber.ts`)
+- Fields: email, subscribedAt, isActive
+- Used for newsletter subscriptions
+
+**TrialRequest Model** (`models/TrialRequest.ts`)
+- Fields: productId, customerInfo (name, email, phone), size, address, status, notes
+- Statuses: pending, approved, rejected, completed
+
+**RewardClaim Model** (`models/RewardClaim.ts`)
+- Fields: userId, rewardType, pointsUsed, claimedAt
+- Used for tracking reward redemptions
+
+### Working with Stripe Payments
+- **Setup**: Stripe client initialized in `lib/stripe.ts`
+- **Payment Flow**:
+  1. Frontend calls `POST /api/checkout/create-payment-intent` with cart items
+  2. Backend validates items, calculates total, creates Stripe PaymentIntent
+  3. Frontend uses Stripe.js to handle payment with client secret
+  4. After payment, frontend calls `POST /api/checkout/verify-payment` to create order
+  5. Stripe webhooks (`POST /api/webhooks/stripe`) handle async payment events
+- **Helper Functions**:
+  - `convertToStripeAmount(amount)` - Convert dollars to cents
+  - `convertFromStripeAmount(amount)` - Convert cents to dollars
+- **Webhook Events Handled**:
+  - `payment_intent.succeeded` - Update order status and send confirmation email
+  - `payment_intent.payment_failed` - Mark order as failed
+- **Testing**: Use Stripe test mode keys and test card numbers (4242 4242 4242 4242)
+- **Webhook Testing**: Use Stripe CLI: `stripe listen --forward-to localhost:3000/api/webhooks/stripe`
+
+### Cloudflare Workers Deployment
+The app is configured to deploy to Cloudflare Workers using `@opennextjs/cloudflare`:
+
+**Configuration** (`wrangler.toml`):
+- Worker name: `oiko`
+- Compatibility date: `2025-09-08`
+- Node.js compatibility enabled
+- Custom domains: `oikaofit.com`, `www.oikaofit.com`
+- Assets served from `.open-next/assets` directory
+
+**Deployment Process**:
+1. Build: `npm run cf-build` - Creates `.open-next/` directory with optimized worker code
+2. Preview: `npm run preview` - Test locally with Miniflare at http://localhost:8787
+3. Deploy: `npm run deploy` - Build and deploy to Cloudflare Workers
+
+**Environment Variables for Production**:
+Use `wrangler secret put <KEY>` to set:
+- All variables from `.env.local` except `NEXT_PUBLIC_*` variables
+- `NEXT_PUBLIC_*` variables should be in `.env.production` (build-time)
+
+**CI/CD**: GitHub Actions workflow in `.github/workflows/deploy.yml` auto-deploys on push to main branch. Requires secrets:
+- `CLOUDFLARE_API_TOKEN` - API token with Workers edit permission
+- `CLOUDFLARE_ACCOUNT_ID` - Account ID from Cloudflare dashboard
 
 ### Code Style
 - Functional components with hooks (no class components)
@@ -305,13 +429,21 @@ All API routes follow REST conventions and return consistent JSON format:
 - Follow existing indentation and formatting (no Prettier config)
 
 ### Setup Instructions
-1. **Install dependencies**: `npm install`
-2. **Configure environment**: Copy `.env.example` to `.env.local` and fill in values
+1. **Install dependencies**: `npm install --legacy-peer-deps` (required for React 19 compatibility)
+2. **Configure environment**: Copy `.env.example` to `.env.local` and fill in all required values
 3. **Setup MongoDB Atlas**: See `BACKEND_SETUP.md` for detailed instructions
-4. **Seed database**: Run `npm run seed` to populate products
-5. **Start development**: Run `npm run dev`
+4. **Setup Stripe** (optional for testing payments):
+   - Create account at https://stripe.com
+   - Get API keys from Dashboard > Developers > API keys
+   - Add `STRIPE_SECRET_KEY` and `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` to `.env.local`
+   - For webhook testing: `stripe listen --forward-to localhost:3000/api/webhooks/stripe`
+   - Copy webhook signing secret to `STRIPE_WEBHOOK_SECRET`
+5. **Seed database**: Run `npm run seed` to populate products
+6. **Create test user** (optional): Run `npm run create-test-user` to create a test account
+7. **Start development**: Run `npm run dev`
 
 For detailed backend setup, authentication setup, and email configuration, see:
 - `BACKEND_SETUP.md` - MongoDB Atlas setup and API testing
 - `AUTH_SETUP.md` - Authentication system documentation
 - `EMAIL_SETUP.md` - Email service configuration
+- `README.md` - Cloudflare Workers deployment guide

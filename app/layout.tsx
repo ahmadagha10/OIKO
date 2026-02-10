@@ -89,11 +89,9 @@ export default function RootLayout({
       </head>
       <body className={`font-sans antialiased ${ubuntu.variable}`}>
         <Providers>
-          <WelcomeWrapper showOnce={true}>
-            <Header />
-            {children}
-            <Footer />
-          </WelcomeWrapper>
+          <Header />
+          {children}
+          <Footer />
         </Providers>
       </body>
     </html>

@@ -1,10 +1,10 @@
-# robots.txt for Oiko
+# Allow all crawlers
 User-agent: *
 Allow: /
 
-# Disallow admin or private pages (when implemented)
+# Disallow admin and API routes
+Disallow: /admin
 Disallow: /api/
-Disallow: /admin/
 
 # Sitemap location
-Sitemap: https://oiko.com/sitemap.xml
+Sitemap: https://oikaofit.com/sitemap.xml

@@ -34,13 +34,22 @@ export default function WelcomeAnimation({ onComplete }: WelcomeAnimationProps) 
   };
 
   return (
-    <AnimatePresence>
+    <AnimatePresence mode="wait">
       {showWelcome && (
         <motion.div
           initial={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.8 }}
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black pointer-events-auto"
+          onAnimationComplete={() => {
+            // Ensure pointer events are disabled when animation completes
+            if (step >= 4) {
+              const element = document.querySelector('.welcome-animation');
+              if (element) {
+                (element as HTMLElement).style.pointerEvents = 'none';
+              }
+            }
+          }}
         >
           {/* Background gradient animation */}
           <div className="absolute inset-0 overflow-hidden">

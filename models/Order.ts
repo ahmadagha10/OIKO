@@ -33,6 +33,7 @@ export interface IOrder extends Document {
   status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
   paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
   paymentMethod?: string;
+  paymentIntentId?: string; // Stripe payment intent ID
   trackingNumber?: string;
   trackingUrl?: string;
   userId?: mongoose.Types.ObjectId;
@@ -148,6 +149,7 @@ const OrderSchema = new Schema<IOrder>(
       default: 'pending',
     },
     paymentMethod: String,
+    paymentIntentId: String, // Stripe payment intent ID for webhook tracking
     trackingNumber: String,
     trackingUrl: String,
     userId: {
