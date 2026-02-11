@@ -15,7 +15,7 @@ export function OrganizationSchema({
   url = "https://oiko.com",
   logo = "https://oiko.com/bar.svg",
   sameAs = [
-    "https://instagram.com/oiko",
+    "https://www.instagram.com/oikoksa/",
     "https://tiktok.com/@oiko"
   ]
 }: OrganizationSchemaProps) {

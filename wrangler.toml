@@ -1,6 +1,9 @@
 #:schema node_modules/wrangler/config-schema.json
 name = "oiko"
-main = ".open-next/worker.js"
+# Maintenance mode - using simple maintenance worker
+main = "maintenance-worker.js"
+# Production mode - uncomment line below and comment line above to restore site
+# main = ".open-next/worker.js"
 compatibility_date = "2025-09-08"
 compatibility_flags = ["nodejs_compat"]
 
@@ -9,6 +12,7 @@ routes = [
   { pattern = "www.oikaofit.com", custom_domain = true },
 ]
 
-[assets]
-directory = ".open-next/assets"
-binding = "ASSETS"
+# Assets not needed in maintenance mode
+# [assets]
+# directory = ".open-next/assets"
+# binding = "ASSETS"

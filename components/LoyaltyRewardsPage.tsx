@@ -423,33 +423,6 @@ export default function LoyaltyRewardsPage() {
             </div>
           )}
         </section>
-
-        <section className="mt-12 rounded-2xl border border-neutral-200 bg-neutral-50 p-4 sm:rounded-3xl sm:p-6">
-          <p className="text-sm text-neutral-700">
-            Demo: Adjust your points to see the stages unlock
-          </p>
-          <div className="mt-3 flex items-center justify-between text-sm text-neutral-500">
-            <span>Adjust points</span>
-            <span>{displayPoints}</span>
-          </div>
-          <input
-            type="range"
-            min={0}
-            max={maxPoints}
-            value={displayPoints}
-            onChange={(event) => {
-              const nextValue = Number(event.target.value);
-              const clamped = clampProgress(nextValue);
-              setCurrentPoints(clamped);
-              localStorage.setItem(FRAGMENTS_KEY, String(clamped));
-              window.dispatchEvent(new Event("oiko:points-updated"));
-            }}
-            className="mt-3 w-full accent-neutral-600"
-          />
-          <p className="mt-2 text-sm text-black">
-            Current points: {displayPoints}
-          </p>
-        </section>
       </div>
       <style jsx global>{`
         @keyframes fadeIn {

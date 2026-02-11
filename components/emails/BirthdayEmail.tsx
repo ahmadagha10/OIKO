@@ -274,7 +274,7 @@ export default function BirthdayEmail({
           </p>
           <div style={{ marginBottom: "16px" }}>
             <a
-              href="https://instagram.com/oiko"
+              href="https://www.instagram.com/oikoksa/"
               style={{
                 color: "#9333ea",
                 textDecoration: "none",

@@ -65,9 +65,9 @@ export function Header() {
             <Image
               src="/images/logo.png"
               alt="Oiko Logo"
-              width={50}
-              height={50}
-              className="h-12 w-auto object-contain"
+              width={150}
+              height={150}
+              className="h-16 w-auto object-contain"
               priority
             />
           </div>

@@ -204,7 +204,7 @@ export default function ContactPage() {
                                 </a>
 
                                 <a
-                                    href="https://instagram.com/oiko"
+                                    href="https://www.instagram.com/oikoksa/"
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="group border border-neutral-200 rounded-xl p-6 hover:border-pink-500 hover:shadow-lg transition-all"
@@ -277,7 +277,7 @@ export default function ContactPage() {
 
                         {/* Instagram Card */}
                         <a
-                            href="https://instagram.com/oiko"
+                            href="https://www.instagram.com/oikoksa/"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="group"

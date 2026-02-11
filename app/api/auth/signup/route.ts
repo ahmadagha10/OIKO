@@ -10,7 +10,7 @@ const signupSchema = z.object({
   password: z.string().min(6, 'Password must be at least 6 characters'),
   firstName: z.string().min(2, 'First name must be at least 2 characters'),
   lastName: z.string().min(2, 'Last name must be at least 2 characters'),
-  phone: z.string().optional(),
+  phone: z.string().min(1, 'Phone number is required'),
 });
 
 // POST /api/auth/signup - Create new user account

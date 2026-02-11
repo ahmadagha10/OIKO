@@ -169,7 +169,7 @@ export function Footer() {
             <h4 className="text-sm font-semibold text-foreground">Connect</h4>
             <div className="flex gap-4">
               <a
-                href="https://instagram.com/oiko"
+                href="https://www.instagram.com/oikoksa/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-muted-foreground hover:text-foreground transition-colors"
