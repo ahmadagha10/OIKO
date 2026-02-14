@@ -8,8 +8,8 @@ compatibility_date = "2025-09-08"
 compatibility_flags = ["nodejs_compat"]
 
 routes = [
-  { pattern = "oikaofit.com", custom_domain = true },
-  { pattern = "www.oikaofit.com", custom_domain = true },
+  { pattern = "oikofit.net", custom_domain = true },
+  { pattern = "www.oikofit.net", custom_domain = true },
 ]
 
 # Assets not needed in maintenance mode

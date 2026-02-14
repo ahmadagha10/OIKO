@@ -19,7 +19,7 @@ jobs:
 
       - run: npx opennextjs-cloudflare build
         env:
-          NEXT_PUBLIC_API_URL: https://oikaofit.com
+          NEXT_PUBLIC_API_URL: https://oikofit.net
           NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: ${{ secrets.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME }}
 
       - uses: cloudflare/wrangler-action@v3
