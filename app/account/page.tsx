@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
-import { getOrders, Order as ApiOrder, updateProfile } from '@/lib/api';
+import { getOrders, Order as ApiOrder, updateProfile, getAddresses, addAddress, deleteAddress, Address } from '@/lib/api';
 
 interface UserProfile {
   name: string;
@@ -316,12 +316,26 @@ export default function EnhancedAccountPage() {
 
     loadOrders();
 
-    // Load mock data for addresses and payment methods (TODO: integrate with database)
-    setAddresses([
-      { id: '1', label: 'Home', street: 'King Fahd Road, Building 123', city: 'Riyadh', country: 'Saudi Arabia', isDefault: true },
-      { id: '2', label: 'Work', street: 'Olaya Street, Office 456', city: 'Riyadh', country: 'Saudi Arabia', isDefault: false }
-    ]);
+    // Load addresses from database
+    const loadAddresses = async () => {
+      if (authUser) {
+        const response = await getAddresses();
+        if (response.success && response.data) {
+          setAddresses(response.data.map((addr: Address) => ({
+            id: addr._id || '',
+            label: addr.isDefault ? 'Default' : 'Address',
+            street: addr.street,
+            city: addr.city,
+            country: addr.country,
+            isDefault: addr.isDefault
+          })));
+        }
+      }
+    };
 
+    loadAddresses();
+
+    // Payment methods (mock data for now - Stripe payment methods integration can be added later)
     setPaymentMethods([
       { id: '1', type: 'Visa', lastFour: '4242', expiryDate: '12/26', isDefault: true },
       { id: '2', type: 'Mastercard', lastFour: '8888', expiryDate: '09/25', isDefault: false }
@@ -832,7 +846,10 @@ export default function EnhancedAccountPage() {
                   )}
 
                   {currentPoints < 100 && (
-                    <button className="w-full border-2 border-neutral-600 text-neutral-600 py-3 rounded-lg font-semibold hover:bg-neutral-600 hover:text-white transition">
+                    <button
+                      onClick={() => router.push('/rewards')}
+                      className="w-full border-2 border-neutral-600 text-neutral-600 py-3 rounded-lg font-semibold hover:bg-neutral-600 hover:text-white transition"
+                    >
                       View Full Journey
                     </button>
                   )}

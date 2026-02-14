@@ -282,6 +282,45 @@ function getOrderShippedEmailHTML(ctaUrl: string, orderRef: string, trackingNumb
 }
 
 /**
+ * Send birthday email with bonus points
+ */
+export async function sendBirthdayEmail({
+  email,
+  firstName,
+  pointsAwarded,
+}: {
+  email: string;
+  firstName: string;
+  pointsAwarded: number;
+}) {
+  try {
+    // Check if Resend is configured
+    if (!resend || !process.env.RESEND_API_KEY) {
+      console.warn('RESEND_API_KEY not configured. Skipping birthday email.');
+      return { success: false, error: 'Email service not configured' };
+    }
+
+    const { data, error} = await resend.emails.send({
+      from: `${COMPANY_NAME} <${FROM_EMAIL}>`,
+      to: [email],
+      subject: `Happy Birthday, ${firstName}! 🎉`,
+      html: getBirthdayEmailHTML(firstName, pointsAwarded),
+    });
+
+    if (error) {
+      console.error('Failed to send birthday email:', error);
+      return { success: false, error: error.message };
+    }
+
+    console.log('Birthday email sent successfully:', data?.id);
+    return { success: true, data };
+  } catch (error: any) {
+    console.error('Error sending birthday email:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
  * Generic email sender (for custom HTML emails like password reset)
  */
 export async function sendEmail({
@@ -345,6 +384,47 @@ function getOrderDeliveredEmailHTML(ctaUrl: string, orderRef: string): string {
           <p style="margin: 16px 0 0; font-size: 12px; line-height: 1.6; color: #6b6b6b;">You can see how this fits into your rewards journey.</p>
           <a href="${ctaUrl}" style="display: inline-block; margin-top: 20px; padding: 12px 18px; border: 1px solid #111111; border-radius: 999px; color: #111111; text-decoration: none; font-size: 14px; font-weight: 600;">
             View rewards journey
+          </a>
+        </div>
+      </body>
+    </html>
+  `;
+}
+
+/**
+ * Generate birthday email HTML
+ */
+function getBirthdayEmailHTML(firstName: string, pointsAwarded: number): string {
+  return `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Happy Birthday from Oiko</title>
+      </head>
+      <body style="margin: 0; padding: 32px 16px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #111111; background-color: #ffffff;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e5e5e5; border-radius: 16px; padding: 32px;">
+          <div style="font-size: 12px; letter-spacing: 0.28em; text-transform: uppercase; color: #6b6b6b;">Oiko</div>
+          <h1 style="margin: 16px 0 12px; font-size: 22px; font-weight: 600;">Happy Birthday, ${firstName}! 🎉</h1>
+          <p style="margin: 0 0 12px; font-size: 14px; line-height: 1.7; color: #2f2f2f;">
+            Today marks another year of your journey.
+          </p>
+          <p style="margin: 0 0 12px; font-size: 14px; line-height: 1.7; color: #2f2f2f;">
+            To celebrate, we've added <strong>+${pointsAwarded} fragment points</strong> to your account.
+          </p>
+          <p style="margin: 0 0 12px; font-size: 14px; line-height: 1.7; color: #2f2f2f;">
+            Use them towards your next piece, or save them for something special.
+          </p>
+          <div style="margin: 24px 0; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; text-align: center;">
+            <p style="margin: 0; font-size: 16px; font-weight: 600; color: #ffffff;">+${pointsAwarded} Fragments</p>
+            <p style="margin: 8px 0 0; font-size: 13px; color: rgba(255, 255, 255, 0.9);">Birthday Gift</p>
+          </div>
+          <p style="margin: 0 0 12px; font-size: 14px; line-height: 1.7; color: #2f2f2f;">
+            Thank you for being part of Oiko.
+          </p>
+          <a href="${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/rewards" style="display: inline-block; margin-top: 20px; padding: 12px 18px; border: 1px solid #111111; border-radius: 999px; color: #111111; text-decoration: none; font-size: 14px; font-weight: 600;">
+            View your rewards
           </a>
         </div>
       </body>

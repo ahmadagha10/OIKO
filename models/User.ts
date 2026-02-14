@@ -8,6 +8,7 @@ export interface IUser extends Document {
   lastName: string;
   phone?: string;
   birthday?: string;
+  lastBirthdayRewardYear?: number;
   role: 'customer' | 'admin';
   fragmentPoints: number;
   profilePhoto?: {
@@ -113,6 +114,9 @@ const UserSchema = new Schema<IUser>(
     birthday: {
       type: String,
       trim: true,
+    },
+    lastBirthdayRewardYear: {
+      type: Number,
     },
     role: {
       type: String,

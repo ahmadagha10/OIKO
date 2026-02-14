@@ -18,6 +18,7 @@ const signupSchema = z.object({
   lastName: z.string().min(2, "Last name must be at least 2 characters"),
   email: z.string().email("Please enter a valid email address"),
   phone: z.string().min(1, "Phone number is required"),
+  birthday: z.string().optional(),
   password: z.string().min(6, "Password must be at least 6 characters"),
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
@@ -128,6 +129,22 @@ export default function SignupPage() {
               {errors.phone && (
                 <p className="text-xs text-destructive">{errors.phone.message}</p>
               )}
+            </div>
+
+            {/* Birthday */}
+            <div className="space-y-2">
+              <Label htmlFor="birthday">Birthday (Optional)</Label>
+              <Input
+                id="birthday"
+                type="date"
+                {...register("birthday")}
+                className={errors.birthday ? "border-destructive" : ""}
+                disabled={isLoading}
+              />
+              {errors.birthday && (
+                <p className="text-xs text-destructive">{errors.birthday.message}</p>
+              )}
+              <p className="text-xs text-muted-foreground">Get a special birthday gift from us!</p>
             </div>
 
             {/* Password */}

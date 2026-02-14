@@ -606,3 +606,61 @@ export async function deleteUser(userId: string): Promise<ApiResponse<any>> {
     method: 'DELETE',
   });
 }
+
+// ==================== ADDRESSES API ====================
+
+export interface Address {
+  _id?: string;
+  street: string;
+  city: string;
+  zipCode: string;
+  country: string;
+  latitude?: number;
+  longitude?: number;
+  isDefault: boolean;
+}
+
+/**
+ * Get user's addresses
+ */
+export async function getAddresses(): Promise<ApiResponse<Address[]>> {
+  return fetchAPI<Address[]>('/api/addresses');
+}
+
+/**
+ * Add new address
+ */
+export async function addAddress(address: Omit<Address, '_id'>): Promise<ApiResponse<Address>> {
+  return fetchAPI<Address>('/api/addresses', {
+    method: 'POST',
+    body: JSON.stringify(address),
+  });
+}
+
+/**
+ * Update address
+ */
+export async function updateAddress(addressId: string, updates: Partial<Address>): Promise<ApiResponse<Address>> {
+  return fetchAPI<Address>(`/api/addresses/${addressId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(updates),
+  });
+}
+
+/**
+ * Delete address
+ */
+export async function deleteAddress(addressId: string): Promise<ApiResponse<any>> {
+  return fetchAPI<any>(`/api/addresses/${addressId}`, {
+    method: 'DELETE',
+  });
+}
+
+/**
+ * Set default address
+ */
+export async function setDefaultAddress(addressId: string): Promise<ApiResponse<Address>> {
+  return fetchAPI<Address>(`/api/addresses/${addressId}/set-default`, {
+    method: 'POST',
+  });
+}
